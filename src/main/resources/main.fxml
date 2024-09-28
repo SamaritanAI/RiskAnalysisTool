@@ -1,0 +1,17 @@
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.Tab?>
+<BorderPane fx:controller="com.infosec.riskanalysistool.controller.MainController"
+            xmlns:fx="http://javafx.com/fxml">
+    <center>
+        <TabPane fx:id="mainTabPane">
+            <Tab text = "Risk Entry">
+                <fx:include source="fxml/risk_entry.fxml"/>
+
+            </Tab>
+            <Tab text="Risk Analysis">
+                <fx:include source="fxml/risk_analysis.fxml"/>
+            </Tab>
+        </TabPane>
+    </center>
+</BorderPane>

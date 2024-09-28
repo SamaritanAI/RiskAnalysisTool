@@ -1,0 +1,184 @@
+/*html {
+    font-family: 'Chakra Petch', sans-serif;
+}*/
+button {
+    font-family: "Chakra Petch", sans-serif;
+}
+body {
+    font-family: 'Chakra Petch', sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 25px;
+    background-color: #eadfd5;
+}
+
+/*Fonts*/
+.chakra-petch-light {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 300;
+    font-style: normal;
+}
+
+.chakra-petch-regular {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+.chakra-petch-medium {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 500;
+    font-style: normal;
+}
+
+.chakra-petch-semibold {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 600;
+    font-style: normal;
+}
+
+.chakra-petch-bold {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+}
+
+.chakra-petch-light-italic {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 300;
+    font-style: italic;
+}
+
+.chakra-petch-regular-italic {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 400;
+    font-style: italic;
+}
+
+.chakra-petch-medium-italic {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 500;
+    font-style: italic;
+}
+
+.chakra-petch-semibold-italic {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 600;
+    font-style: italic;
+}
+
+.chakra-petch-bold-italic {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 700;
+    font-style: italic;
+}
+
+
+#btnDark {
+    position: fixed;
+    bottom: 30px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: #008CBA;
+    color: white;
+    border-color: #000000;
+    border-style: double;
+    border-radius: 25px;
+    cursor: pointer;
+}
+
+#btnDark:hover {
+    background-color: #008CBA;
+    opacity: 0.7;
+    transition: 0.3s;
+}
+
+#btnSignIn:hover {
+    background-color: #008CBA;
+    opacity: 0.7;
+    transition: 0.7s;
+}
+
+.dark-mode {
+    background-color: #001029;
+    color: white;
+}
+.dark-mode #btnSignIn {
+    color: white;
+}
+
+.App-header {
+    background-color: #282c34;
+    padding: 20px;
+    color: white;
+    border-radius: 25px;
+}
+
+.SignIn {
+    margin: 20px;
+}
+
+.SignIn form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.SignIn div {
+    margin: 10px 0;
+}
+
+.SignIn label {
+    margin-right: 10px;
+}
+
+.SignIn input {
+    padding: 5px;
+}
+
+.SignIn button {
+    padding: 10px 20px;
+    background-color: #008CBA;
+    border: none;
+    cursor: pointer;
+    border-radius: 25px;
+}
+
+.SignIn button:hover {
+    background-color: #008CBA;
+}
+
+#logo {
+    display: inline;
+    width: 100px;
+    height: 100px;
+}
+
+#container {
+    display: inline-block;
+}
+
+.image {
+    vertical-align: middle;
+    width: 100px;
+    height: 100px;
+}
+
+.heading {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+#btnSignIn {
+    border-color: #000000;
+    border-style: double;
+    border-radius: 25px;
+}
+
+#btnRegister {
+    border-color: #000000;
+    border-style: double;
+    border-radius: 25px;
+    display: inline-block;
+}
