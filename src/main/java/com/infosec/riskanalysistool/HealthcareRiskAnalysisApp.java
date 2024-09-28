@@ -10,9 +10,12 @@ import javafx.collections.*;
 import javafx.stage.Stage;
 import javafx.beans.property.*;
 import javafx.geometry.Insets;
+
 import java.util.List;
 
 public class HealthcareRiskAnalysisApp extends Application {
+    private TextField sleField;
+    private TextField aroField;
 
     //UI Components
     private TabPane mainTabPane;
@@ -23,12 +26,10 @@ public class HealthcareRiskAnalysisApp extends Application {
     private ComboBox<RMFStep> rmfStepCombo;
     private TextField impactField;
     private TextField likelihoodField;
-    private Button addRiskButton;
 
     //Risk Analysis Tab Components
     private TableView<Risk> riskTable;
     private BarChart<String, Number> riskChart;
-
 
     private ObservableList<Risk> risks;
 
@@ -72,7 +73,9 @@ public class HealthcareRiskAnalysisApp extends Application {
         rmfStepCombo = new ComboBox<>();
         impactField = new TextField();
         likelihoodField = new TextField();
-        addRiskButton = new Button("Add Risk");
+        sleField = new TextField();  //New field for SLE
+        aroField = new TextField();  //New field for ARO
+        Button addRiskButton = new Button("Add Risk");
 
         //Set ComboBox items
         hipaaRuleCombo.getItems().setAll(HIPAARule.values());
@@ -94,7 +97,11 @@ public class HealthcareRiskAnalysisApp extends Application {
         grid.add(impactField, 1, 3);
         grid.add(new Label("Likelihood (1-10):"), 0, 4);
         grid.add(likelihoodField, 1, 4);
-        grid.add(addRiskButton, 1, 5);
+        grid.add(new Label("Single Loss Expectancy (SLE):"), 0, 5);
+        grid.add(sleField, 1, 5);
+        grid.add(new Label("annualised Rate of Occurrence (ARO):"), 0, 6);
+        grid.add(aroField, 1, 6);
+        grid.add(addRiskButton, 1, 7);  //Adjusted position of the button
 
         //Set up event handler
         addRiskButton.setOnAction(e -> handleAddRisk());
@@ -123,25 +130,31 @@ public class HealthcareRiskAnalysisApp extends Application {
 
     private void handleAddRisk() {
         try {
-            String threat = threatField.getText();
-            HIPAARule hipaaRule = hipaaRuleCombo.getValue();
-            RMFStep rmfStep = rmfStepCombo.getValue();
-            int impact = Integer.parseInt(impactField.getText());
-            int likelihood = Integer.parseInt(likelihoodField.getText());
-
-            Risk risk = new Risk(threat, hipaaRule, rmfStep, impact, likelihood);
+            Risk risk = getRisk();
 
             if (ValidationUtil.isValidRisk(risk)) {
                 risks.add(risk);
                 clearRiskEntryFields();
                 updateAnalysis();
             } else {
-                // Handle invalid risk (e.g., show an alert)
-                showAlert("Invalid Risk Entry", "Please ensure all fields are filled correctly.");
+                showAlert("Invalid Risk Entry", "Please ensure all fields are filled correctly and values are within acceptable ranges.");
             }
         } catch (NumberFormatException ex) {
-            showAlert("Invalid Input", "Impact and Likelihood must be integers between 1 and 10.");
+            showAlert("Invalid Input", "Please enter valid numbers for impact, likelihood, SLE, and ARO.");
         }
+    }
+
+    private Risk getRisk() {
+        String threat = threatField.getText();
+        HIPAARule hipaaRule = hipaaRuleCombo.getValue();
+        RMFStep rmfStep = rmfStepCombo.getValue();
+        int impact = Integer.parseInt(impactField.getText());
+        int likelihood = Integer.parseInt(likelihoodField.getText());
+        double sle = Double.parseDouble(sleField.getText());
+        double aro = Double.parseDouble(aroField.getText());
+
+        //Create the Risk object with all required parameters
+        return new Risk(threat, hipaaRule, rmfStep, impact, likelihood, sle, aro);
     }
 
     private void clearRiskEntryFields() {
@@ -150,6 +163,8 @@ public class HealthcareRiskAnalysisApp extends Application {
         rmfStepCombo.getSelectionModel().clearSelection();
         impactField.clear();
         likelihoodField.clear();
+        sleField.clear();  //Clear SLE field
+        aroField.clear();  //Clear ARO field
     }
 
     private void setupRiskTable() {
@@ -168,17 +183,27 @@ public class HealthcareRiskAnalysisApp extends Application {
         TableColumn<Risk, Integer> likelihoodColumn = new TableColumn<>("Likelihood");
         likelihoodColumn.setCellValueFactory(data -> data.getValue().likelihoodProperty().asObject());
 
-        TableColumn<Risk, Integer> riskScoreColumn = new TableColumn<>("Risk Score");
-        riskScoreColumn.setCellValueFactory(data -> data.getValue().riskScoreProperty().asObject());
+        TableColumn<Risk, Integer> rpnColumn = new TableColumn<>("RPN");
+        rpnColumn.setCellValueFactory(data -> data.getValue().riskPriorityNumberProperty().asObject());
 
-        riskTable.getColumns().addAll(threatColumn, hipaaRuleColumn, rmfStepColumn, impactColumn, likelihoodColumn, riskScoreColumn);
+        TableColumn<Risk, Double> sleColumn = new TableColumn<>("SLE");
+        sleColumn.setCellValueFactory(data -> data.getValue().singleLossExpectancyProperty().asObject());
+
+        TableColumn<Risk, Double> aroColumn = new TableColumn<>("ARO");
+        aroColumn.setCellValueFactory(data -> data.getValue().annualisedRateOfOccurrenceProperty().asObject());
+
+        TableColumn<Risk, Double> aleColumn = new TableColumn<>("ALE");
+        aleColumn.setCellValueFactory(data -> data.getValue().annualisedLossExpectancyProperty().asObject());
+
+        TableColumn<Risk, String> recommendationColumn = new TableColumn<>("Recommendations");
+        recommendationColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().generateRecommendation()));
+
+        riskTable.getColumns().addAll(threatColumn, hipaaRuleColumn, rmfStepColumn, impactColumn, likelihoodColumn, rpnColumn, sleColumn, aroColumn, aleColumn, recommendationColumn);
         riskTable.setItems(risks);
     }
 
-    private void updateAnalysis() {
-        //The riskTable updates automatically because it's bound to the ObservableList 'risks'
 
-        //Update the riskChart
+    private void updateAnalysis() {
         ChartUtil.updateRiskChart(riskChart, risks);
     }
 
@@ -196,29 +221,42 @@ public class HealthcareRiskAnalysisApp extends Application {
     }
 
     public enum RMFStep {
-        CATEGORIZE, SELECT, IMPLEMENT, ASSESS, AUTHORIZE, MONITOR
+        categorise, SELECT, IMPLEMENT, ASSESS, authorise, MONITOR
     }
 
-    // Risk Class
     public class Risk {
-        private SimpleStringProperty threat;
-        private ObjectProperty<HIPAARule> hipaaRule;
-        private ObjectProperty<RMFStep> rmfStep;
-        private SimpleIntegerProperty impact;
-        private SimpleIntegerProperty likelihood;
-        private SimpleIntegerProperty riskScore;
+        private final SimpleStringProperty threat;
+        private final ObjectProperty<HIPAARule> hipaaRule;
+        private final ObjectProperty<RMFStep> rmfStep;
+        private final SimpleIntegerProperty impact;
+        private final SimpleIntegerProperty likelihood;
+        private final SimpleIntegerProperty riskPriorityNumber;
 
-        public Risk(String threat, HIPAARule hipaaRule, RMFStep rmfStep, int impact, int likelihood) {
+        private SimpleDoubleProperty singleLossExpectancy;          //SLE
+        private SimpleDoubleProperty annualisedRateOfOccurrence;    //ARO
+        private SimpleDoubleProperty annualisedLossExpectancy;      //ALE = SLE * ARO
+
+        public Risk(String threat, HIPAARule hipaaRule, RMFStep rmfStep, int impact, int likelihood, double singleLossExpectancy, double annualisedRateOfOccurrence) {
+
             this.threat = new SimpleStringProperty(threat);
             this.hipaaRule = new SimpleObjectProperty<>(hipaaRule);
             this.rmfStep = new SimpleObjectProperty<>(rmfStep);
             this.impact = new SimpleIntegerProperty(impact);
             this.likelihood = new SimpleIntegerProperty(likelihood);
-            this.riskScore = new SimpleIntegerProperty(calculateRiskScore());
+            this.riskPriorityNumber = new SimpleIntegerProperty(impact * likelihood);
+
+            this.singleLossExpectancy = new SimpleDoubleProperty(singleLossExpectancy);
+            this.annualisedRateOfOccurrence = new SimpleDoubleProperty(annualisedRateOfOccurrence);
+            this.annualisedLossExpectancy = new SimpleDoubleProperty(calculateALE());
         }
 
+        //Getter and Setters
         public String getThreat() {
             return threat.get();
+        }
+
+        public void setThreat(String threat) {
+            this.threat.set(threat);
         }
 
         public SimpleStringProperty threatProperty() {
@@ -229,12 +267,20 @@ public class HealthcareRiskAnalysisApp extends Application {
             return hipaaRule.get();
         }
 
+        public void setHipaaRule(HIPAARule hipaaRule) {
+            this.hipaaRule.set(hipaaRule);
+        }
+
         public ObjectProperty<HIPAARule> hipaaRuleProperty() {
             return hipaaRule;
         }
 
         public RMFStep getRmfStep() {
             return rmfStep.get();
+        }
+
+        public void setRmfStep(RMFStep rmfStep) {
+            this.rmfStep.set(rmfStep);
         }
 
         public ObjectProperty<RMFStep> rmfStepProperty() {
@@ -245,6 +291,11 @@ public class HealthcareRiskAnalysisApp extends Application {
             return impact.get();
         }
 
+        public void setImpact(int impact) {
+            this.impact.set(impact);
+            updateRiskPriorityNumber();
+        }
+
         public SimpleIntegerProperty impactProperty() {
             return impact;
         }
@@ -253,32 +304,151 @@ public class HealthcareRiskAnalysisApp extends Application {
             return likelihood.get();
         }
 
+        public void setLikelihood(int likelihood) {
+            this.likelihood.set(likelihood);
+            updateRiskPriorityNumber();
+        }
+
         public SimpleIntegerProperty likelihoodProperty() {
             return likelihood;
         }
 
-        public int getRiskScore() {
-            return riskScore.get();
+        public int getRiskPriorityNumber() {
+            return riskPriorityNumber.get();
         }
 
-        public SimpleIntegerProperty riskScoreProperty() {
-            return riskScore;
+        public SimpleIntegerProperty riskPriorityNumberProperty() {
+            return riskPriorityNumber;
         }
 
-        private int calculateRiskScore() {
+        private void updateRiskPriorityNumber() {
+            this.riskPriorityNumber.set(getImpact() * getLikelihood());
+        }
+
+        public double getSingleLossExpectancy() {
+            return singleLossExpectancy.get();
+        }
+
+        public void setSingleLossExpectancy(double sle) {
+            this.singleLossExpectancy.set(sle);
+            updateAnnualisedLossExpectancy();
+        }
+
+        public SimpleDoubleProperty singleLossExpectancyProperty() {
+            return singleLossExpectancy;
+        }
+
+        public double getannualisedRateOfOccurrence() {
+            return annualisedRateOfOccurrence.get();
+        }
+
+        public void setannualisedRateOfOccurrence(double aro) {
+            this.annualisedRateOfOccurrence.set(aro);
+            updateAnnualisedLossExpectancy();
+        }
+
+        public SimpleDoubleProperty annualisedRateOfOccurrenceProperty() {
+            return annualisedRateOfOccurrence;
+        }
+
+        public double getannualisedLossExpectancy() {
+            return annualisedLossExpectancy.get();
+        }
+
+        public SimpleDoubleProperty annualisedLossExpectancyProperty() {
+            return annualisedLossExpectancy;
+        }
+
+        private double calculateALE() {
+            return getSingleLossExpectancy() * getannualisedRateOfOccurrence();
+        }
+
+        private void updateAnnualisedLossExpectancy() {
+            this.annualisedLossExpectancy.set(calculateALE());
+        }
+
+        //Calculate Risk Priority Number (RPN)
+        public int calculateRPN() {
             return getImpact() * getLikelihood();
+        }
+
+        //Generate recommendations based on risk attributes
+        public String generateRecommendation() {
+            StringBuilder recommendations = new StringBuilder();
+            int rpn = getRiskPriorityNumber();
+            double ale = getannualisedLossExpectancy();
+
+            //Provide recommendations based on RPN
+            if (rpn > 200) {
+                recommendations.append("Critical risk identified. Immediate action required.\n");
+            } else if (rpn > 70) {
+                recommendations.append("High risk. Prompt attention is necessary.\n");
+            } else if (rpn > 20) {
+                recommendations.append("Medium risk. Monitor and plan mitigation strategies.\n");
+            } else {
+                recommendations.append("Low risk. Regular monitoring is sufficient.\n");
+            }
+
+            //Provide recommendations based on ALE
+            if (ale > 100000) {
+                recommendations.append("ALE exceeds $100,000. Consider investing in significant risk mitigation measures.\n");
+            } else if (ale > 50000) {
+                recommendations.append("ALE exceeds $50,000. Evaluate cost-effective mitigation strategies.\n");
+            } else {
+                recommendations.append("ALE is within acceptable limits. Maintain current controls.\n");
+            }
+
+            //Additional recommendations based on impacts
+            if (getImpact() > 7) {
+                recommendations.append("High impact risk. Prioritize impact reduction measures.\n");
+            }
+
+            if (getLikelihood() > 7) {
+                recommendations.append("High likelihood risk. Implement measures to reduce occurrence.\n");
+            }
+
+            //Specific recommendations based on HIPAA Rule
+            switch (getHipaaRule()) {
+                case PRIVACY_RULE:
+                    recommendations.append("Ensure all PHI disclosures are compliant with the Privacy Rule.\n");
+                    break;
+                case SECURITY_RULE:
+                    recommendations.append("Strengthen technical safeguards to protect ePHI.\n");
+                    break;
+                case BREACH_NOTIFICATION_RULE:
+                    recommendations.append("Develop a robust breach response plan in line with notification requirements.\n");
+                    break;
+            }
+
+            //Specific recommendations based on RMF Step
+            switch (getRmfStep()) {
+                case categorise:
+                    recommendations.append("Review system categorisations to ensure appropriate risk levels.\n");
+                    break;
+                case SELECT:
+                    recommendations.append("Select security controls tailored to mitigate identified risks.\n");
+                    break;
+                case IMPLEMENT:
+                    recommendations.append("Implement the chosen security controls effectively.\n");
+                    break;
+                case ASSESS:
+                    recommendations.append("Regularly assess the effectiveness of security controls.\n");
+                    break;
+                case authorise:
+                    recommendations.append("Obtain necessary authorisations before system operation.\n");
+                    break;
+                case MONITOR:
+                    recommendations.append("Continuously monitor security controls and system operations.\n");
+                    break;
+            }
+
+            return recommendations.toString();
         }
     }
 
-    //Validation Utility Class
     public static class ValidationUtil {
         public static boolean isValidRisk(Risk risk) {
-            return risk != null &&
-                    risk.getThreat() != null && !risk.getThreat().isEmpty() &&
-                    risk.getHipaaRule() != null &&
-                    risk.getRmfStep() != null &&
-                    risk.getImpact() >= 1 && risk.getImpact() <= 10 &&
-                    risk.getLikelihood() >= 1 && risk.getLikelihood() <= 10;
+            return risk != null && risk.getThreat() != null && !risk.getThreat().isEmpty() && risk.getHipaaRule() != null && risk.getRmfStep() != null && risk.getImpact() >= 1 && risk.getImpact() <= 10 && risk.getLikelihood() >= 1 && risk.getLikelihood() <= 10 && risk.getSingleLossExpectancy() >= 0 && risk.getannualisedRateOfOccurrence() >= 0;
         }
     }
 
@@ -286,10 +456,10 @@ public class HealthcareRiskAnalysisApp extends Application {
     public static class ChartUtil {
         public static void updateRiskChart(BarChart<String, Number> chart, List<Risk> risks) {
             XYChart.Series<String, Number> series = new XYChart.Series<>();
-            series.setName("Risk Scores");
+            series.setName("Risk Priority Number (RPN)");
 
             for (Risk risk : risks) {
-                series.getData().add(new XYChart.Data<>(risk.getThreat(), risk.getRiskScore()));
+                series.getData().add(new XYChart.Data<>(risk.getThreat(), risk.getRiskPriorityNumber()));
             }
 
             chart.getData().clear();
