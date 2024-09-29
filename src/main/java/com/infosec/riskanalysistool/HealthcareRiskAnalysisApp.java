@@ -32,6 +32,8 @@ public class HealthcareRiskAnalysisApp extends Application {
     private ComboBox<RMFStep> rmfStepCombo;
     private TextField impactField;
     private TextField likelihoodField;
+    private TextField controlMeasuresField;
+    private TextField controlEffectivenessField;
 
     //Risk Analysis Tab Components
     private TableView<Risk> riskTable;
@@ -74,21 +76,27 @@ public class HealthcareRiskAnalysisApp extends Application {
     }
 
     private Parent createRiskEntryContent() {
-        //Create UI components for Risk Entry
+        // Create UI components for Risk Entry
         threatField = new TextField();
         hipaaRuleCombo = new ComboBox<>();
         rmfStepCombo = new ComboBox<>();
         impactField = new TextField();
         likelihoodField = new TextField();
-        sleField = new TextField();  //New field for SLE
-        aroField = new TextField();  //New field for ARO
+        sleField = new TextField();  // Field for SLE
+        aroField = new TextField();  // Field for ARO
+        controlMeasuresField = new TextField();         // New field for control measures
+        controlEffectivenessField = new TextField();    // New field for control effectiveness
         Button addRiskButton = new Button("Add Risk");
 
-        //Set ComboBox items
+        // Set ComboBox items
         hipaaRuleCombo.getItems().setAll(HIPAARule.values());
         rmfStepCombo.getItems().setAll(RMFStep.values());
 
-        //Set up layout
+        // Set prompt texts
+        controlMeasuresField.setPromptText("Describe existing controls");
+        controlEffectivenessField.setPromptText("Enter effectiveness (0-100)");
+
+        // Set up layout
         GridPane grid = new GridPane();
         grid.setVgap(10);
         grid.setHgap(10);
@@ -108,13 +116,18 @@ public class HealthcareRiskAnalysisApp extends Application {
         grid.add(sleField, 1, 5);
         grid.add(new Label("Annualised Rate of Occurrence (ARO):"), 0, 6);
         grid.add(aroField, 1, 6);
-        grid.add(addRiskButton, 1, 7);  //Adjusted position of the button
+        grid.add(new Label("Control Measures:"), 0, 7);
+        grid.add(controlMeasuresField, 1, 7);
+        grid.add(new Label("Control Effectiveness (%):"), 0, 8);
+        grid.add(controlEffectivenessField, 1, 8);
+        grid.add(addRiskButton, 1, 9);  // Adjusted position of the button
 
-        //Set up event handler
+        // Set up event handler
         addRiskButton.setOnAction(e -> handleAddRisk());
 
         return grid;
     }
+
 
     private Parent createRiskAnalysisContent() {
         //Create UI components for Risk Analysis
@@ -159,9 +172,11 @@ public class HealthcareRiskAnalysisApp extends Application {
         int likelihood = Integer.parseInt(likelihoodField.getText());
         double sle = Double.parseDouble(sleField.getText());
         double aro = Double.parseDouble(aroField.getText());
+        String controlMeasures = controlMeasuresField.getText();
+        double controlEffectiveness = Double.parseDouble(controlEffectivenessField.getText());
 
         //Create the Risk object with all required parameters
-        return new Risk(threat, hipaaRule, rmfStep, impact, likelihood, sle, aro);
+        return new Risk(threat, hipaaRule, rmfStep, impact, likelihood, sle, aro, controlMeasures, controlEffectiveness);
     }
 
     private void clearRiskEntryFields() {
@@ -170,8 +185,10 @@ public class HealthcareRiskAnalysisApp extends Application {
         rmfStepCombo.getSelectionModel().clearSelection();
         impactField.clear();
         likelihoodField.clear();
-        sleField.clear();  //Clear SLE field
-        aroField.clear();  //Clear ARO field
+        sleField.clear();
+        aroField.clear();
+        controlMeasuresField.clear();
+        controlEffectivenessField.clear();
     }
 
     private void setupRiskTable() {
@@ -205,14 +222,28 @@ public class HealthcareRiskAnalysisApp extends Application {
 
         TableColumn<Risk, String> aleColumn = new TableColumn<>("ALE");
         aleColumn.setCellValueFactory(data -> {
-            double aleValue = data.getValue().getannualisedLossExpectancy();
+            double aleValue = data.getValue().getAnnualisedLossExpectancy();
             String formattedALE = NumberFormat.getCurrencyInstance().format(aleValue);
             return new SimpleStringProperty(formattedALE);
         });
+
+        //Control Measures Column
+        TableColumn<Risk, String> controlMeasuresColumn = new TableColumn<>("Control Measures");
+        controlMeasuresColumn.setCellValueFactory(data -> data.getValue().controlMeasuresProperty());
+
+        //Control Effectiveness Column
+        TableColumn<Risk, Double> controlEffectivenessColumn = new TableColumn<>("Control Effectiveness (%)");
+        controlEffectivenessColumn.setCellValueFactory(data -> data.getValue().controlEffectivenessProperty().asObject());
+
+        //Recommendation Colum
         TableColumn<Risk, String> recommendationColumn = new TableColumn<>("Recommendations");
         recommendationColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().generateRecommendation()));
 
-        riskTable.getColumns().addAll(threatColumn, hipaaRuleColumn, rmfStepColumn, impactColumn, likelihoodColumn, rpnColumn, sleColumn, aroColumn, aleColumn, recommendationColumn);
+        //Residual Risk Column
+        TableColumn<Risk, Double> residualRiskColumn = new TableColumn<>("Residual Risk");
+        residualRiskColumn.setCellValueFactory(data -> data.getValue().residualRiskProperty().asObject());
+
+        riskTable.getColumns().addAll(threatColumn, hipaaRuleColumn, rmfStepColumn, impactColumn, likelihoodColumn, rpnColumn, residualRiskColumn, sleColumn, aroColumn, aleColumn,controlMeasuresColumn, controlEffectivenessColumn, recommendationColumn);
         riskTable.setItems(risks);
     }
 
@@ -250,7 +281,13 @@ public class HealthcareRiskAnalysisApp extends Application {
         private SimpleDoubleProperty annualisedRateOfOccurrence;    //ARO
         private SimpleDoubleProperty annualisedLossExpectancy;      //ALE = SLE * ARO
 
-        public Risk(String threat, HIPAARule hipaaRule, RMFStep rmfStep, int impact, int likelihood, double singleLossExpectancy, double annualisedRateOfOccurrence) {
+        private final SimpleStringProperty controlMeasures;               // Control Measures
+        private final SimpleDoubleProperty controlEffectiveness;          // Control Effectiveness (%)
+        private final SimpleDoubleProperty residualRisk;                  // Residual Risk
+
+
+
+        public Risk(String threat, HIPAARule hipaaRule, RMFStep rmfStep, int impact, int likelihood, double singleLossExpectancy, double annualisedRateOfOccurrence, String controlMeasures, double controlEffectiveness) {
 
             this.threat = new SimpleStringProperty(threat);
             this.hipaaRule = new SimpleObjectProperty<>(hipaaRule);
@@ -262,6 +299,10 @@ public class HealthcareRiskAnalysisApp extends Application {
             this.singleLossExpectancy = new SimpleDoubleProperty(singleLossExpectancy);
             this.annualisedRateOfOccurrence = new SimpleDoubleProperty(annualisedRateOfOccurrence);
             this.annualisedLossExpectancy = new SimpleDoubleProperty(calculateALE());
+
+            this.controlMeasures = new SimpleStringProperty(controlMeasures);
+            this.controlEffectiveness = new SimpleDoubleProperty(controlEffectiveness);
+            this.residualRisk = new SimpleDoubleProperty(calculateResidualRisk());
         }
 
         //Getter and Setters
@@ -356,7 +397,7 @@ public class HealthcareRiskAnalysisApp extends Application {
             return annualisedRateOfOccurrence.get();
         }
 
-        public void setannualisedRateOfOccurrence(double aro) {
+        public void setAnnualisedRateOfOccurrence(double aro) {
             this.annualisedRateOfOccurrence.set(aro);
             updateAnnualisedLossExpectancy();
         }
@@ -365,7 +406,7 @@ public class HealthcareRiskAnalysisApp extends Application {
             return annualisedRateOfOccurrence;
         }
 
-        public double getannualisedLossExpectancy() {
+        public double getAnnualisedLossExpectancy() {
             return annualisedLossExpectancy.get();
         }
 
@@ -381,6 +422,51 @@ public class HealthcareRiskAnalysisApp extends Application {
             this.annualisedLossExpectancy.set(calculateALE());
         }
 
+        //Control Measures
+        public String getControlMeasures() {
+            return controlMeasures.get();
+        }
+
+        public void setControlMeasures(String controlMeasures) {
+            this.controlMeasures.set(controlMeasures);
+        }
+
+        public SimpleStringProperty controlMeasuresProperty() {
+            return controlMeasures;
+        }
+
+        //Control Effectiveness
+        public double getControlEffectiveness() {
+            return controlEffectiveness.get();
+        }
+
+        public void setControlEffectiveness(double controlEffectiveness) {
+            this.controlEffectiveness.set(controlEffectiveness);
+            updateResidualRisk();
+        }
+
+        public SimpleDoubleProperty controlEffectivenessProperty() {
+            return controlEffectiveness;
+        }
+
+        //Residual Risk
+        public double getResidualRisk() {
+            return residualRisk.get();
+        }
+
+        public SimpleDoubleProperty residualRiskProperty() {
+            return residualRisk;
+        }
+
+        private double calculateResidualRisk() {
+            double effectiveness = getControlEffectiveness() / 100.0; // Convert percentage to decimal
+            return getRiskPriorityNumber() * (1 - effectiveness);
+        }
+
+        private void updateResidualRisk() {
+            this.residualRisk.set(calculateResidualRisk());
+        }
+
         //Calculate Risk Priority Number (RPN)
         public int calculateRPN() {
             return getImpact() * getLikelihood();
@@ -390,7 +476,8 @@ public class HealthcareRiskAnalysisApp extends Application {
         public String generateRecommendation() {
             StringBuilder recommendations = new StringBuilder();
             int rpn = getRiskPriorityNumber();
-            double ale = getannualisedLossExpectancy();
+            double ale = getAnnualisedLossExpectancy();
+            double residual = getResidualRisk();
 
             //Provide recommendations based on RPN
             if (rpn > 200) {
@@ -412,7 +499,7 @@ public class HealthcareRiskAnalysisApp extends Application {
                 recommendations.append("ALE is within acceptable limits. Maintain current controls.\n");
             }
 
-            //Additional recommendations based on impacts
+            //Recommendations based on impacts
             if (getImpact() > 7) {
                 recommendations.append("High impact risk. prioritise impact reduction measures.\n");
             }
@@ -462,7 +549,18 @@ public class HealthcareRiskAnalysisApp extends Application {
 
     public static class ValidationUtil {
         public static boolean isValidRisk(Risk risk) {
-            return risk != null && risk.getThreat() != null && !risk.getThreat().isEmpty() && risk.getHipaaRule() != null && risk.getRmfStep() != null && risk.getImpact() >= 1 && risk.getImpact() <= 10 && risk.getLikelihood() >= 1 && risk.getLikelihood() <= 10 && risk.getSingleLossExpectancy() >= 0 && risk.getannualisedRateOfOccurrence() >= 0;
+            boolean baseValidation = risk != null &&
+                    risk.getThreat() != null && !risk.getThreat().isEmpty() &&
+                    risk.getHipaaRule() != null &&
+                    risk.getRmfStep() != null &&
+                    risk.getImpact() >= 1 && risk.getImpact() <= 10 &&
+                    risk.getLikelihood() >= 1 && risk.getLikelihood() <= 10 &&
+                    risk.getSingleLossExpectancy() >= 0 &&
+                    risk.getannualisedRateOfOccurrence() >= 0;
+
+            boolean controlValidation = risk.getControlEffectiveness() >= 0 && risk.getControlEffectiveness() <= 100;
+
+            return baseValidation && controlValidation;
         }
     }
 
@@ -473,10 +571,10 @@ public class HealthcareRiskAnalysisApp extends Application {
             aleSeries.setName("annualised Loss Expectancy (ALE)");
 
             for (Risk risk : risks) {
-                XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(risk.getThreat(), risk.getannualisedLossExpectancy());
+                XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(risk.getThreat(), risk.getAnnualisedLossExpectancy());
                 aleSeries.getData().add(dataPoint);
 
-                double aleValue = risk.getannualisedLossExpectancy();
+                double aleValue = risk.getAnnualisedLossExpectancy();
                 String formattedALE = NumberFormat.getCurrencyInstance().format(aleValue);
 
                 Tooltip tooltip = new Tooltip("ALE: " + formattedALE);
