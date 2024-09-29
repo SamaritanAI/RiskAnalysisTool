@@ -1,3 +1,5 @@
+//TODO add functionality to export results.
+
 package com.infosec.riskanalysistool;
 
 import javafx.application.Application;
@@ -12,9 +14,8 @@ import javafx.beans.property.*;
 import javafx.geometry.Insets;
 import javafx.util.StringConverter;
 
-import java.text.NumberFormat;
-
 import java.util.List;
+import java.text.NumberFormat;
 import java.util.Objects;
 
 public class HealthcareRiskAnalysisApp extends Application {
@@ -233,7 +234,7 @@ public class HealthcareRiskAnalysisApp extends Application {
     }
 
     public enum RMFStep {
-        categorise, SELECT, IMPLEMENT, ASSESS, authorise, MONITOR
+        Categorise, SELECT, IMPLEMENT, ASSESS, Authorise, MONITOR
     }
 
     public class Risk {
@@ -434,7 +435,7 @@ public class HealthcareRiskAnalysisApp extends Application {
 
             //Specific recommendations based on RMF Step
             switch (getRmfStep()) {
-                case categorise:
+                case Categorise:
                     recommendations.append("Review system categorisations to ensure appropriate risk levels.\n");
                     break;
                 case SELECT:
@@ -446,7 +447,7 @@ public class HealthcareRiskAnalysisApp extends Application {
                 case ASSESS:
                     recommendations.append("Regularly assess the effectiveness of security controls.\n");
                     break;
-                case authorise:
+                case Authorise:
                     recommendations.append("Obtain necessary authorisations before system operation.\n");
                     break;
                 case MONITOR:
