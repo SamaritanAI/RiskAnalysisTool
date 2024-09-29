@@ -10,8 +10,12 @@ import javafx.collections.*;
 import javafx.stage.Stage;
 import javafx.beans.property.*;
 import javafx.geometry.Insets;
+import javafx.util.StringConverter;
+
+import java.text.NumberFormat;
 
 import java.util.List;
+import java.util.Objects;
 
 public class HealthcareRiskAnalysisApp extends Application {
     private TextField sleField;
@@ -45,6 +49,7 @@ public class HealthcareRiskAnalysisApp extends Application {
 
         //Set up Scene and Stage
         Scene scene = new Scene(mainTabPane, 1080, 720);
+        scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/css/styles.css")).toExternalForm());
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -99,7 +104,7 @@ public class HealthcareRiskAnalysisApp extends Application {
         grid.add(likelihoodField, 1, 4);
         grid.add(new Label("Single Loss Expectancy (SLE):"), 0, 5);
         grid.add(sleField, 1, 5);
-        grid.add(new Label("annualised Rate of Occurrence (ARO):"), 0, 6);
+        grid.add(new Label("Annualised Rate of Occurrence (ARO):"), 0, 6);
         grid.add(aroField, 1, 6);
         grid.add(addRiskButton, 1, 7);  //Adjusted position of the button
 
@@ -186,15 +191,22 @@ public class HealthcareRiskAnalysisApp extends Application {
         TableColumn<Risk, Integer> rpnColumn = new TableColumn<>("RPN");
         rpnColumn.setCellValueFactory(data -> data.getValue().riskPriorityNumberProperty().asObject());
 
-        TableColumn<Risk, Double> sleColumn = new TableColumn<>("SLE");
-        sleColumn.setCellValueFactory(data -> data.getValue().singleLossExpectancyProperty().asObject());
+        TableColumn<Risk, String> sleColumn = new TableColumn<>("SLE");
+        sleColumn.setCellValueFactory(data -> {
+            double sleValue = data.getValue().getSingleLossExpectancy();
+            String formattedSLE = NumberFormat.getCurrencyInstance().format(sleValue);
+            return new SimpleStringProperty(formattedSLE);
+        });
 
         TableColumn<Risk, Double> aroColumn = new TableColumn<>("ARO");
         aroColumn.setCellValueFactory(data -> data.getValue().annualisedRateOfOccurrenceProperty().asObject());
 
-        TableColumn<Risk, Double> aleColumn = new TableColumn<>("ALE");
-        aleColumn.setCellValueFactory(data -> data.getValue().annualisedLossExpectancyProperty().asObject());
-
+        TableColumn<Risk, String> aleColumn = new TableColumn<>("ALE");
+        aleColumn.setCellValueFactory(data -> {
+            double aleValue = data.getValue().getannualisedLossExpectancy();
+            String formattedALE = NumberFormat.getCurrencyInstance().format(aleValue);
+            return new SimpleStringProperty(formattedALE);
+        });
         TableColumn<Risk, String> recommendationColumn = new TableColumn<>("Recommendations");
         recommendationColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().generateRecommendation()));
 
@@ -390,17 +402,17 @@ public class HealthcareRiskAnalysisApp extends Application {
             }
 
             //Provide recommendations based on ALE
-            if (ale > 100000) {
-                recommendations.append("ALE exceeds $100,000. Consider investing in significant risk mitigation measures.\n");
-            } else if (ale > 50000) {
-                recommendations.append("ALE exceeds $50,000. Evaluate cost-effective mitigation strategies.\n");
+            if (ale > 100_000) {
+                recommendations.append("ALE exceeds R100,000. Consider investing in significant risk mitigation measures.\n");
+            } else if (ale > 50_000) {
+                recommendations.append("ALE exceeds R50,000. Evaluate cost-effective mitigation strategies.\n");
             } else {
                 recommendations.append("ALE is within acceptable limits. Maintain current controls.\n");
             }
 
             //Additional recommendations based on impacts
             if (getImpact() > 7) {
-                recommendations.append("High impact risk. Prioritize impact reduction measures.\n");
+                recommendations.append("High impact risk. prioritise impact reduction measures.\n");
             }
 
             if (getLikelihood() > 7) {
@@ -455,15 +467,37 @@ public class HealthcareRiskAnalysisApp extends Application {
     //Chart Utility Class
     public static class ChartUtil {
         public static void updateRiskChart(BarChart<String, Number> chart, List<Risk> risks) {
-            XYChart.Series<String, Number> series = new XYChart.Series<>();
-            series.setName("Risk Priority Number (RPN)");
+            XYChart.Series<String, Number> aleSeries = new XYChart.Series<>();
+            aleSeries.setName("annualised Loss Expectancy (ALE)");
 
             for (Risk risk : risks) {
-                series.getData().add(new XYChart.Data<>(risk.getThreat(), risk.getRiskPriorityNumber()));
+                XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(risk.getThreat(), risk.getannualisedLossExpectancy());
+                aleSeries.getData().add(dataPoint);
+
+                double aleValue = risk.getannualisedLossExpectancy();
+                String formattedALE = NumberFormat.getCurrencyInstance().format(aleValue);
+
+                Tooltip tooltip = new Tooltip("ALE: " + formattedALE);
+                Tooltip.install(dataPoint.getNode(), tooltip);
             }
 
             chart.getData().clear();
-            chart.getData().add(series);
+            chart.getData().add(aleSeries);
+
+            // Format the y-axis to display currency
+            NumberAxis yAxis = (NumberAxis) chart.getYAxis();
+            yAxis.setTickLabelFormatter(new StringConverter<Number>() {
+                @Override
+                public String toString(Number object) {
+                    return NumberFormat.getCurrencyInstance().format(object.doubleValue());
+                }
+
+                @Override
+                public Number fromString(String string) {
+                    // Not needed for display purposes
+                    return null;
+                }
+            });
         }
     }
 
