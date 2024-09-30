@@ -243,7 +243,7 @@ public class HealthcareRiskAnalysisApp extends Application {
         TableColumn<Risk, Double> residualRiskColumn = new TableColumn<>("Residual Risk");
         residualRiskColumn.setCellValueFactory(data -> data.getValue().residualRiskProperty().asObject());
 
-        riskTable.getColumns().addAll(threatColumn, hipaaRuleColumn, rmfStepColumn, impactColumn, likelihoodColumn, rpnColumn, residualRiskColumn, sleColumn, aroColumn, aleColumn,controlMeasuresColumn, controlEffectivenessColumn, recommendationColumn);
+        riskTable.getColumns().addAll(threatColumn, hipaaRuleColumn, rmfStepColumn, impactColumn, likelihoodColumn, rpnColumn, residualRiskColumn, sleColumn, aroColumn, aleColumn, controlMeasuresColumn, controlEffectivenessColumn, recommendationColumn);
         riskTable.setItems(risks);
     }
 
@@ -284,7 +284,6 @@ public class HealthcareRiskAnalysisApp extends Application {
         private final SimpleStringProperty controlMeasures;               // Control Measures
         private final SimpleDoubleProperty controlEffectiveness;          // Control Effectiveness (%)
         private final SimpleDoubleProperty residualRisk;                  // Residual Risk
-
 
 
         public Risk(String threat, HIPAARule hipaaRule, RMFStep rmfStep, int impact, int likelihood, double singleLossExpectancy, double annualisedRateOfOccurrence, String controlMeasures, double controlEffectiveness) {
@@ -549,14 +548,7 @@ public class HealthcareRiskAnalysisApp extends Application {
 
     public static class ValidationUtil {
         public static boolean isValidRisk(Risk risk) {
-            boolean baseValidation = risk != null &&
-                    risk.getThreat() != null && !risk.getThreat().isEmpty() &&
-                    risk.getHipaaRule() != null &&
-                    risk.getRmfStep() != null &&
-                    risk.getImpact() >= 1 && risk.getImpact() <= 10 &&
-                    risk.getLikelihood() >= 1 && risk.getLikelihood() <= 10 &&
-                    risk.getSingleLossExpectancy() >= 0 &&
-                    risk.getannualisedRateOfOccurrence() >= 0;
+            boolean baseValidation = risk != null && risk.getThreat() != null && !risk.getThreat().isEmpty() && risk.getHipaaRule() != null && risk.getRmfStep() != null && risk.getImpact() >= 1 && risk.getImpact() <= 10 && risk.getLikelihood() >= 1 && risk.getLikelihood() <= 10 && risk.getSingleLossExpectancy() >= 0 && risk.getannualisedRateOfOccurrence() >= 0;
 
             boolean controlValidation = risk.getControlEffectiveness() >= 0 && risk.getControlEffectiveness() <= 100;
 
