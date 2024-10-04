@@ -1,6 +1,3 @@
-//TODO add functionality to export results.
-//TODO fix functionality for testing the app.
-
 package com.infosec.riskanalysistool;
 
 import javafx.application.Application;
@@ -51,6 +48,10 @@ public class HealthcareRiskAnalysisApp extends Application {
         //Initialise UI Components
         initialiseUI();
 
+        //testing
+        addPredefinedRisks();
+        updateAnalysis();
+
         //Set up Scene and Stage
         Scene scene = new Scene(mainTabPane, 1080, 720);
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/css/styles.css")).toExternalForm());
@@ -75,6 +76,15 @@ public class HealthcareRiskAnalysisApp extends Application {
         mainTabPane.getTabs().addAll(riskEntryTab, riskAnalysisTab);
     }
 
+
+    private void addPredefinedRisks() {
+        risks.add(new Risk("Threat 1", HIPAARule.PRIVACY_RULE, RMFStep.SELECT, 3, 9, 1000000, 0.5, "Yes", 80.0));
+        risks.add(new Risk("Threat 2", HIPAARule.SECURITY_RULE, RMFStep.ASSESS, 5, 7, 2000000, 1.0, "This", 60.0));
+        risks.add(new Risk("Threat 3", HIPAARule.BREACH_NOTIFICATION_RULE, RMFStep.MONITOR, 8, 8, 500000, 0.8, "Monitor", 75.0));
+        risks.add(new Risk("Threat 4", HIPAARule.SECURITY_RULE, RMFStep.IMPLEMENT, 2, 5, 100000, 0.3, "Implement", 50.0));
+        risks.add(new Risk("Threat 5", HIPAARule.PRIVACY_RULE, RMFStep.AUTHORISE, 7, 6, 1500000, 0.7, "Authorize", 90.0));
+    }
+
     private Parent createRiskEntryContent() {
         // Create UI components for Risk Entry
         threatField = new TextField();
@@ -82,21 +92,18 @@ public class HealthcareRiskAnalysisApp extends Application {
         rmfStepCombo = new ComboBox<>();
         impactField = new TextField();
         likelihoodField = new TextField();
-        sleField = new TextField();  // Field for SLE
-        aroField = new TextField();  // Field for ARO
-        controlMeasuresField = new TextField();         // New field for control measures
-        controlEffectivenessField = new TextField();    // New field for control effectiveness
+        sleField = new TextField();
+        aroField = new TextField();
+        controlMeasuresField = new TextField();
+        controlEffectivenessField = new TextField();
         Button addRiskButton = new Button("Add Risk");
 
-        // Set ComboBox items
         hipaaRuleCombo.getItems().setAll(HIPAARule.values());
         rmfStepCombo.getItems().setAll(RMFStep.values());
 
-        // Set prompt texts
         controlMeasuresField.setPromptText("Describe existing controls");
         controlEffectivenessField.setPromptText("Enter effectiveness (0-100)");
 
-        // Set up layout
         GridPane grid = new GridPane();
         grid.setVgap(10);
         grid.setHgap(10);
@@ -120,32 +127,97 @@ public class HealthcareRiskAnalysisApp extends Application {
         grid.add(controlMeasuresField, 1, 7);
         grid.add(new Label("Control Effectiveness (%):"), 0, 8);
         grid.add(controlEffectivenessField, 1, 8);
-        grid.add(addRiskButton, 1, 9);  // Adjusted position of the button
+        grid.add(addRiskButton, 1, 9);
 
-        // Set up event handler
         addRiskButton.setOnAction(e -> handleAddRisk());
 
         return grid;
     }
 
-
     private Parent createRiskAnalysisContent() {
         //Create UI components for Risk Analysis
         riskTable = new TableView<>();
         riskChart = new BarChart<>(new CategoryAxis(), new NumberAxis());
-
-        //Set up riskTable columns
         setupRiskTable();
 
-        //Layout
+        // Create the risk matrix
+        GridPane riskMatrix = createRiskMatrix();
+
+        // Add all components (table, chart, and matrix) to the VBox
         VBox vbox = new VBox(10);
         vbox.setPadding(new Insets(20));
-        vbox.getChildren().addAll(riskTable, riskChart);
+        vbox.getChildren().addAll(riskTable, riskChart, riskMatrix);
 
-        //Update analysis
         updateAnalysis();
 
         return vbox;
+    }
+
+    private GridPane createRiskMatrix() {
+        GridPane matrix = new GridPane();
+        matrix.setPadding(new Insets(20));
+        matrix.setHgap(10);
+        matrix.setVgap(10);
+
+        // Create labels for impact and likelihood
+        for (int i = 1; i <= 10; i++) {
+            matrix.add(new Label("Impact " + i), i, 0); // Impact labels at the top
+            matrix.add(new Label("Likelihood " + i), 0, i); // Likelihood labels on the left
+        }
+
+        // Fill the matrix with categories (Low, Medium, High, Critical)
+        for (int i = 1; i <= 10; i++) {
+            for (int j = 1; j <= 10; j++) {
+                final int impact = i;  // Declare impact as final for lambda
+                final int likelihood = j;  // Declare likelihood as final for lambda
+
+                String category = categorizeRisk(impact, likelihood);  // Determine risk category based on impact and likelihood
+                Label riskLabel = new Label(category);
+
+                // Apply base CSS class based on the category
+                switch (category) {
+                    case "Critical":
+                        riskLabel.getStyleClass().add("critical-risk");
+                        break;
+                    case "High":
+                        riskLabel.getStyleClass().add("high-risk");
+                        break;
+                    case "Medium":
+                        riskLabel.getStyleClass().add("medium-risk");
+                        break;
+                    case "Low":
+                        riskLabel.getStyleClass().add("low-risk");
+                        break;
+                }
+
+                // Check if this cell corresponds to any active risks
+                boolean isHighlighted = risks.stream()
+                        .anyMatch(risk -> risk.getImpact() == impact && risk.getLikelihood() == likelihood);
+
+                if (isHighlighted) {
+                    // Highlight the cell if it matches the impact/likelihood of an existing risk
+                    riskLabel.setStyle("-fx-border-color: black; -fx-border-width: 2px; -fx-background-color: lightblue;");
+                }
+
+                matrix.add(riskLabel, i, j);
+            }
+        }
+
+        return matrix;
+    }
+
+
+    private String categorizeRisk(int impact, int likelihood) {
+        int rpn = impact * likelihood;
+        if (rpn > 200) {
+            return "Critical";
+        } else if (rpn > 70) {
+            return "High";
+        } else if (rpn > 20) {
+            return "Medium";
+        } else {
+            return "Low";
+        }
     }
 
     private void handleAddRisk() {
@@ -227,19 +299,15 @@ public class HealthcareRiskAnalysisApp extends Application {
             return new SimpleStringProperty(formattedALE);
         });
 
-        //Control Measures Column
         TableColumn<Risk, String> controlMeasuresColumn = new TableColumn<>("Control Measures");
         controlMeasuresColumn.setCellValueFactory(data -> data.getValue().controlMeasuresProperty());
 
-        //Control Effectiveness Column
         TableColumn<Risk, Double> controlEffectivenessColumn = new TableColumn<>("Control Effectiveness (%)");
         controlEffectivenessColumn.setCellValueFactory(data -> data.getValue().controlEffectivenessProperty().asObject());
 
-        //Recommendation Colum
         TableColumn<Risk, String> recommendationColumn = new TableColumn<>("Recommendations");
         recommendationColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().generateRecommendation()));
 
-        //Residual Risk Column
         TableColumn<Risk, Double> residualRiskColumn = new TableColumn<>("Residual Risk");
         residualRiskColumn.setCellValueFactory(data -> data.getValue().residualRiskProperty().asObject());
 
@@ -247,9 +315,50 @@ public class HealthcareRiskAnalysisApp extends Application {
         riskTable.setItems(risks);
     }
 
+    /*private void updateAnalysis() {
+        ChartUtil.updateRiskChart(riskChart, risks);
+    }*/
+
 
     private void updateAnalysis() {
-        ChartUtil.updateRiskChart(riskChart, risks);
+        // Clear previous data
+        riskChart.getData().clear();
+
+        if (risks.isEmpty()) {
+            return;  // No data to plot
+        }
+
+        // Create a new series to plot ALE (Annualised Loss Expectancy)
+        XYChart.Series<String, Number> aleSeries = new XYChart.Series<>();
+        aleSeries.setName("Annualised Loss Expectancy (ALE)");
+
+        // Add each risk to the series
+        for (Risk risk : risks) {
+            XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(risk.getThreat(), risk.getAnnualisedLossExpectancy());
+            aleSeries.getData().add(dataPoint);
+
+            // Optionally, add a tooltip to each bar to show ALE
+            String formattedALE = NumberFormat.getCurrencyInstance().format(risk.getAnnualisedLossExpectancy());
+            Tooltip tooltip = new Tooltip("ALE: " + formattedALE);
+            Tooltip.install(dataPoint.getNode(), tooltip);
+        }
+
+        // Add the series to the chart
+        riskChart.getData().add(aleSeries);
+
+        // Ensure that the Y-axis is formatted as currency
+        NumberAxis yAxis = (NumberAxis) riskChart.getYAxis();
+        yAxis.setTickLabelFormatter(new StringConverter<Number>() {
+            @Override
+            public String toString(Number object) {
+                return NumberFormat.getCurrencyInstance().format(object.doubleValue());
+            }
+
+            @Override
+            public Number fromString(String string) {
+                return null; // Not needed
+            }
+        });
     }
 
     private void showAlert(String title, String content) {
@@ -266,7 +375,7 @@ public class HealthcareRiskAnalysisApp extends Application {
     }
 
     public enum RMFStep {
-        Categorise, SELECT, IMPLEMENT, ASSESS, Authorise, MONITOR
+        Categorise, SELECT, IMPLEMENT, ASSESS, Authorise, AUTHORISE, MONITOR
     }
 
     public class Risk {
@@ -281,9 +390,9 @@ public class HealthcareRiskAnalysisApp extends Application {
         private SimpleDoubleProperty annualisedRateOfOccurrence;    //ARO
         private SimpleDoubleProperty annualisedLossExpectancy;      //ALE = SLE * ARO
 
-        private final SimpleStringProperty controlMeasures;               // Control Measures
-        private final SimpleDoubleProperty controlEffectiveness;          // Control Effectiveness (%)
-        private final SimpleDoubleProperty residualRisk;                  // Residual Risk
+        private final SimpleStringProperty controlMeasures;
+        private final SimpleDoubleProperty controlEffectiveness;
+        private final SimpleDoubleProperty residualRisk;
 
 
         public Risk(String threat, HIPAARule hipaaRule, RMFStep rmfStep, int impact, int likelihood, double singleLossExpectancy, double annualisedRateOfOccurrence, String controlMeasures, double controlEffectiveness) {
@@ -560,7 +669,7 @@ public class HealthcareRiskAnalysisApp extends Application {
     public static class ChartUtil {
         public static void updateRiskChart(BarChart<String, Number> chart, List<Risk> risks) {
             XYChart.Series<String, Number> aleSeries = new XYChart.Series<>();
-            aleSeries.setName("annualised Loss Expectancy (ALE)");
+            aleSeries.setName("Annualised Loss Expectancy (ALE)");
 
             for (Risk risk : risks) {
                 XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(risk.getThreat(), risk.getAnnualisedLossExpectancy());
