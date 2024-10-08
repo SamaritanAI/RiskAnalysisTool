@@ -202,7 +202,7 @@ public class HealthcareRiskAnalysisApp extends Application {
     }
 
     //2D array to store matrix labels for highlighting
-    private Label[][] riskMatrixLabels = new Label[10][10];
+    private final Label[][] riskMatrixLabels = new Label[10][10];
 
     private GridPane createRiskMatrix() {
         GridPane matrix = new GridPane();
@@ -417,9 +417,9 @@ public class HealthcareRiskAnalysisApp extends Application {
         private final SimpleIntegerProperty likelihood;
         private final SimpleIntegerProperty riskPriorityNumber;
 
-        private SimpleDoubleProperty singleLossExpectancy;          //SLE
-        private SimpleDoubleProperty annualisedRateOfOccurrence;    //ARO
-        private SimpleDoubleProperty annualisedLossExpectancy;      //ALE = SLE * ARO
+        private final SimpleDoubleProperty singleLossExpectancy;          //SLE
+        private final SimpleDoubleProperty annualisedRateOfOccurrence;    //ARO
+        private final SimpleDoubleProperty annualisedLossExpectancy;      //ALE = SLE * ARO
 
         private final SimpleStringProperty controlMeasures;
         private final SimpleDoubleProperty controlEffectiveness;
