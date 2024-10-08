@@ -72,3 +72,19 @@
 .critical-risk {
     -fx-background-color: red;
 }
+
+.low-risk {
+    -fx-background-color: lightgreen;
+}
+
+.medium-risk {
+    -fx-background-color: yellow;
+}
+
+.high-risk {
+    -fx-background-color: orange;
+}
+
+.critical-risk {
+    -fx-background-color: red;
+}

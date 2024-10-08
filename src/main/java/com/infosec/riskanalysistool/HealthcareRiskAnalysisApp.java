@@ -73,7 +73,14 @@ public class HealthcareRiskAnalysisApp extends Application {
         riskAnalysisTab.setContent(createRiskAnalysisContent());
         riskAnalysisTab.setClosable(false);
 
-        mainTabPane.getTabs().addAll(riskEntryTab, riskAnalysisTab);
+        //Tab for the Bar Chart
+        Tab riskChartTab = new Tab("Risk Chart");
+        riskChartTab.setContent(createRiskChartContent());  // Method to move the chart here
+        riskChartTab.setClosable(false);
+
+        mainTabPane.getTabs().addAll(riskEntryTab, riskAnalysisTab, riskChartTab);
+
+        //mainTabPane.getTabs().addAll(riskEntryTab, riskAnalysisTab);
     }
 
 
@@ -106,7 +113,7 @@ public class HealthcareRiskAnalysisApp extends Application {
                 10.0
         ));
 
-/*        // Test Case 2: Low Risk with No Controls
+        // Test Case 2: Low Risk with No Controls
         risks.add(new Risk(
                 "Minor software bugs leading to slight data inconsistencies",
                 HIPAARule.PRIVACY_RULE,
@@ -115,9 +122,9 @@ public class HealthcareRiskAnalysisApp extends Application {
                 1000, 0.2,
                 "None",
                 0.0
-        ));*/
+        ));
 
-        /*// Test Case 3: Medium Risk with Partial Controls
+        // Test Case 3: Medium Risk with Partial Controls
         risks.add(new Risk(
                 "Phishing attacks targeting staff emails",
                 HIPAARule.BREACH_NOTIFICATION_RULE,
@@ -126,7 +133,7 @@ public class HealthcareRiskAnalysisApp extends Application {
                 10000, 1.5,
                 "Basic cybersecurity training for staff",
                 40.0
-        ));*/
+        ));
 
     }
 
@@ -179,7 +186,69 @@ public class HealthcareRiskAnalysisApp extends Application {
         return grid;
     }
 
+    private Parent createRiskChartContent() {
+        riskChart = new BarChart<>(new CategoryAxis(), new NumberAxis());
+
+        VBox vbox = new VBox(10);
+        vbox.setPadding(new Insets(20));
+        vbox.getChildren().add(riskChart);
+
+        updateAnalysis();
+
+        return vbox;
+    }
+
+
+
     private Parent createRiskAnalysisContent() {
+        // Create UI components for Risk Analysis
+        riskTable = new TableView<>();
+        setupRiskTable(); // Setup table view
+
+        // Create the risk matrix
+        GridPane riskMatrix = createRiskMatrix();
+
+        // Add listener to riskTable to highlight the matrix cell corresponding to the selected risk
+        riskTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                // Highlight the risk in the matrix when a risk is selected
+                highlightMatrixCell(newSelection.getImpact(), newSelection.getLikelihood());
+            }
+        });
+
+        // Add all components (table, matrix) to the VBox
+        VBox vbox = new VBox(10);
+        vbox.setPadding(new Insets(20));
+        vbox.getChildren().addAll(riskTable, riskMatrix);
+
+        return vbox;  // No riskChart here, it's in the separate tab
+    }
+
+
+
+    private void highlightMatrixCell(int impact, int likelihood) {
+        // Clear previous highlights
+        clearMatrixHighlights();
+
+        // Highlight the selected cell
+        Label selectedCell = riskMatrixLabels[likelihood - 1][impact - 1]; // Array is zero-indexed
+        selectedCell.setStyle("-fx-border-color: black; -fx-border-width: 2px; -fx-background-color: lightblue;");
+    }
+
+    private void clearMatrixHighlights() {
+        // Loop through all cells and reset their styles
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                riskMatrixLabels[i][j].setStyle(""); // Reset the style to default
+            }
+        }
+    }
+
+
+
+
+
+    /*private Parent createRiskAnalysisContent() {
         //Create UI components for Risk Analysis
         riskTable = new TableView<>();
         riskChart = new BarChart<>(new CategoryAxis(), new NumberAxis());
@@ -191,14 +260,14 @@ public class HealthcareRiskAnalysisApp extends Application {
         // Add all components (table, chart, and matrix) to the VBox
         VBox vbox = new VBox(10);
         vbox.setPadding(new Insets(20));
-        vbox.getChildren().addAll(riskTable, riskChart/*, riskMatrix*/);
+        vbox.getChildren().addAll(riskTable, riskChart, riskMatrix);
 
         updateAnalysis();
 
         return vbox;
-    }
+    }*/
 
-    private GridPane createRiskMatrix() {
+    /*private GridPane createRiskMatrix() {
         GridPane matrix = new GridPane();
         matrix.setPadding(new Insets(20));
         matrix.setHgap(10);
@@ -249,7 +318,57 @@ public class HealthcareRiskAnalysisApp extends Application {
         }
 
         return matrix;
+    }*/
+    // Declare a 2D array to store matrix labels for highlighting
+    private Label[][] riskMatrixLabels = new Label[10][10];
+
+    private GridPane createRiskMatrix() {
+        GridPane matrix = new GridPane();
+        matrix.setPadding(new Insets(20));
+        matrix.setHgap(10);
+        matrix.setVgap(10);
+
+        // Create labels for impact and likelihood
+        for (int i = 1; i <= 10; i++) {
+            matrix.add(new Label("Impact " + i), i, 0); // Impact labels at the top
+            matrix.add(new Label("Likelihood " + i), 0, i); // Likelihood labels on the left
+        }
+
+        // Fill the matrix with categories (Low, Medium, High, Critical)
+        for (int i = 1; i <= 10; i++) {
+            for (int j = 1; j <= 10; j++) {
+                final int impact = i;  // Declare impact as final for lambda
+                final int likelihood = j;  // Declare likelihood as final for lambda
+
+                String category = categorizeRisk(impact, likelihood);  // Determine risk category based on impact and likelihood
+                Label riskLabel = new Label(category);
+
+                // Apply base CSS class based on the category
+                switch (category) {
+                    case "Critical":
+                        riskLabel.getStyleClass().add("critical-risk");
+                        break;
+                    case "High":
+                        riskLabel.getStyleClass().add("high-risk");
+                        break;
+                    case "Medium":
+                        riskLabel.getStyleClass().add("medium-risk");
+                        break;
+                    case "Low":
+                        riskLabel.getStyleClass().add("low-risk");
+                        break;
+                }
+
+                // Store the label in the 2D array for easy reference later
+                riskMatrixLabels[likelihood - 1][impact - 1] = riskLabel;
+
+                matrix.add(riskLabel, i, j);
+            }
+        }
+
+        return matrix;
     }
+
 
 
     private String categorizeRisk(int impact, int likelihood) {
@@ -365,7 +484,7 @@ public class HealthcareRiskAnalysisApp extends Application {
     }*/
 
 
-    private void updateAnalysis() {
+    /*private void updateAnalysis() {
         // Clear previous data
         riskChart.getData().clear();
 
@@ -404,7 +523,47 @@ public class HealthcareRiskAnalysisApp extends Application {
                 return null; // Not needed
             }
         });
+    }*/
+
+    private void updateAnalysis() {
+        // Ensure that the riskChart is updated correctly in the Risk Chart tab
+        riskChart.getData().clear();
+
+        if (risks.isEmpty()) {
+            return;  // No data to plot
+        }
+
+        XYChart.Series<String, Number> aleSeries = new XYChart.Series<>();
+        aleSeries.setName("Annualised Loss Expectancy (ALE)");
+
+        // Add data points to the chart
+        for (Risk risk : risks) {
+            XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(risk.getThreat(), risk.getAnnualisedLossExpectancy());
+            aleSeries.getData().add(dataPoint);
+
+            String formattedALE = NumberFormat.getCurrencyInstance().format(risk.getAnnualisedLossExpectancy());
+            Tooltip tooltip = new Tooltip("ALE: " + formattedALE);
+            Tooltip.install(dataPoint.getNode(), tooltip);
+        }
+
+        riskChart.getData().add(aleSeries);
+
+        // Format the y-axis
+        NumberAxis yAxis = (NumberAxis) riskChart.getYAxis();
+        yAxis.setTickLabelFormatter(new StringConverter<Number>() {
+            @Override
+            public String toString(Number object) {
+                return NumberFormat.getCurrencyInstance().format(object.doubleValue());
+            }
+
+            @Override
+            public Number fromString(String string) {
+                return null; // Not needed
+            }
+        });
     }
+
+
 
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
