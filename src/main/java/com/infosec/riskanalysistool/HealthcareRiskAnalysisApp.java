@@ -91,48 +91,16 @@ public class HealthcareRiskAnalysisApp extends Application {
         risks.add(new Risk("Threat 5", HIPAARule.PRIVACY_RULE, RMFStep.AUTHORISE, 7, 6, 1500000, 0.7, "Authorize", 90.0));*/
 
         //Test Case 1: High Risk with Effective Controls
-        risks.add(new Risk(
-                "Unauthorised access to patient data",
-                HIPAARule.SECURITY_RULE,
-                RMFStep.IMPLEMENT,
-                9, 8,
-                100000, 0.7,
-                "Multi-factor authentication and regular security audits",
-                70.0
-        ));
+        risks.add(new Risk("Unauthorised access to patient data", HIPAARule.SECURITY_RULE, RMFStep.IMPLEMENT, 9, 8, 100000, 0.7, "Multi-factor authentication and regular security audits", 70.0));
 
         //Test Case 2: Critical Risk with Ineffective Controls
-        risks.add(new Risk(
-                "Ransomware attack causing system-wide shutdown",
-                HIPAARule.SECURITY_RULE,
-                RMFStep.SELECT,
-                10, 9,
-                500000, 0.3,
-                "Outdated antivirus software",
-                10.0
-        ));
+        risks.add(new Risk("Ransomware attack causing system-wide shutdown", HIPAARule.SECURITY_RULE, RMFStep.SELECT, 10, 9, 500000, 0.3, "Outdated antivirus software", 10.0));
 
         //Test Case 2: Low Risk with No Controls
-        risks.add(new Risk(
-                "Minor software bugs leading to slight data inconsistencies",
-                HIPAARule.PRIVACY_RULE,
-                RMFStep.MONITOR,
-                2, 3,
-                1000, 0.2,
-                "None",
-                0.0
-        ));
+        risks.add(new Risk("Minor software bugs leading to slight data inconsistencies", HIPAARule.PRIVACY_RULE, RMFStep.MONITOR, 2, 3, 1000, 0.2, "None", 0.0));
 
         //Test Case 3: Medium Risk with Partial Controls
-        risks.add(new Risk(
-                "Phishing attacks targeting staff emails",
-                HIPAARule.BREACH_NOTIFICATION_RULE,
-                RMFStep.ASSESS,
-                6, 5,
-                10000, 1.5,
-                "Basic cybersecurity training for staff",
-                40.0
-        ));
+        risks.add(new Risk("Phishing attacks targeting staff emails", HIPAARule.BREACH_NOTIFICATION_RULE, RMFStep.ASSESS, 6, 5, 10000, 1.5, "Basic cybersecurity training for staff", 40.0));
 
     }
 
@@ -197,7 +165,6 @@ public class HealthcareRiskAnalysisApp extends Application {
     }
 
 
-
     private Parent createRiskAnalysisContent() {
         riskTable = new TableView<>();
         setupRiskTable();
@@ -217,7 +184,6 @@ public class HealthcareRiskAnalysisApp extends Application {
 
         return vbox;
     }
-
 
 
     private void highlightMatrixCell(int impact, int likelihood) {
@@ -281,7 +247,6 @@ public class HealthcareRiskAnalysisApp extends Application {
 
         return matrix;
     }
-
 
 
     private String categorizeRisk(int impact, int likelihood) {
@@ -391,7 +356,7 @@ public class HealthcareRiskAnalysisApp extends Application {
         riskTable.setItems(risks);
     }
 
-        private void updateAnalysis() {
+    private void updateAnalysis() {
         riskChart.getData().clear();
 
         if (risks.isEmpty()) {
@@ -425,7 +390,6 @@ public class HealthcareRiskAnalysisApp extends Application {
             }
         });
     }
-
 
 
     private void showAlert(String title, String content) {
