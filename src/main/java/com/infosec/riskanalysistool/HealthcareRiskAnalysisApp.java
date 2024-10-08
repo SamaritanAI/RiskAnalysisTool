@@ -218,10 +218,8 @@ public class HealthcareRiskAnalysisApp extends Application {
         //Matrix with categories (Low, Medium, High, Critical)
         for (int i = 1; i <= 10; i++) {
             for (int j = 1; j <= 10; j++) {
-                final int impact = i;
-                final int likelihood = j;
 
-                String category = categorizeRisk(impact, likelihood);  //Determine risk category based on impact and likelihood
+                String category = categorizeRisk(i, j);  //Determine risk category based on impact and likelihood
                 Label riskLabel = new Label(category);
 
                 switch (category) {
@@ -239,7 +237,7 @@ public class HealthcareRiskAnalysisApp extends Application {
                         break;
                 }
 
-                riskMatrixLabels[likelihood - 1][impact - 1] = riskLabel;
+                riskMatrixLabels[j - 1][i - 1] = riskLabel;
 
                 matrix.add(riskLabel, i, j);
             }
